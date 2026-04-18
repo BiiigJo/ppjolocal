@@ -89,9 +89,9 @@ export default function Wardrobe({ user, onSeeOutfits, onSeeAI }: WardrobeProps)
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [filterColor, setFilterColor] = useState<string>("all");
-  const [filterStyle, setFilterStyle] = useState<string>("all");
-  const [filterSeason, setFilterSeason] = useState<string>("all");
+  const [filterColor, setFilterColor] = useState<string>("");
+  const [filterStyle, setFilterStyle] = useState<string>("");
+  const [filterSeason, setFilterSeason] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showConfirm, setShowConfirm] = useState<{ type: 'single' | 'bulk', id?: string } | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'oldest' | 'az' | 'za'>('date');
@@ -117,6 +117,17 @@ export default function Wardrobe({ user, onSeeOutfits, onSeeAI }: WardrobeProps)
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedItemId(null);
+        setIsEditing(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
@@ -210,9 +221,9 @@ ${item.careInstructions || "Lavage standard."}
     const seasons = new Set<string>();
     
     items.forEach(item => {
-      if (item.color) colors.add(item.color);
-      if (item.style) styles.add(item.style);
-      if (item.season) seasons.add(item.season);
+      if (item.color && item.color.trim()) colors.add(item.color.trim());
+      if (item.style && item.style.trim()) styles.add(item.style.trim());
+      if (item.season && item.season.trim()) seasons.add(item.season.trim());
     });
 
     return {
@@ -227,9 +238,9 @@ ${item.careInstructions || "Lavage standard."}
       const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
                             item.type.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = !selectedCategory || item.category === selectedCategory;
-      const matchesColor = filterColor === "all" || item.color === filterColor;
-      const matchesStyle = filterStyle === "all" || item.style === filterStyle;
-      const matchesSeason = filterSeason === "all" || item.season === filterSeason;
+      const matchesColor = !filterColor || filterColor === "all" || (item.color && item.color.toLowerCase().trim() === filterColor.toLowerCase().trim());
+      const matchesStyle = !filterStyle || filterStyle === "all" || (item.style && item.style.toLowerCase().trim() === filterStyle.toLowerCase().trim());
+      const matchesSeason = !filterSeason || filterSeason === "all" || (item.season && item.season.toLowerCase().trim() === filterSeason.toLowerCase().trim());
       
       return matchesSearch && matchesCategory && matchesColor && matchesStyle && matchesSeason;
     })
@@ -332,13 +343,13 @@ ${item.careInstructions || "Lavage standard."}
                     <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Couleur</label>
                     <Select value={filterColor} onValueChange={setFilterColor}>
                       <SelectTrigger className="h-10 rounded-xl text-xs bg-white border-zinc-100 shadow-sm">
-                        <SelectValue placeholder="Tous" />
+                        <SelectValue placeholder="Toutes" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-zinc-100 shadow-xl">
-                        <SelectItem value="all">
+                        <SelectItem value="">
                           <div className="flex items-center gap-2">
                              <div className="w-3 h-3 rounded-full border border-zinc-100 bg-zinc-200" />
-                             Tous
+                             Toutes
                           </div>
                         </SelectItem>
                         {filterOptions.colors.map(c => (
@@ -356,10 +367,10 @@ ${item.careInstructions || "Lavage standard."}
                     <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Saison</label>
                     <Select value={filterSeason} onValueChange={setFilterSeason}>
                       <SelectTrigger className="h-10 rounded-xl text-xs bg-white border-zinc-100 shadow-sm">
-                        <SelectValue placeholder="Tous" />
+                        <SelectValue placeholder="Toutes" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-zinc-100 shadow-xl">
-                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="">Toutes</SelectItem>
                         <SelectItem value="Printemps">Printemps</SelectItem>
                         <SelectItem value="Été">Été</SelectItem>
                         <SelectItem value="Automne">Automne</SelectItem>
@@ -375,7 +386,7 @@ ${item.careInstructions || "Lavage standard."}
                         <SelectValue placeholder="Tous" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-zinc-100 shadow-xl">
-                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="">Tous</SelectItem>
                         <SelectItem value="Casual">Casual 👕</SelectItem>
                         <SelectItem value="Street">Street 🧥</SelectItem>
                         <SelectItem value="Chic">Chic 🤵</SelectItem>
@@ -389,9 +400,9 @@ ${item.careInstructions || "Lavage standard."}
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {
-                    setFilterColor("all");
-                    setFilterSeason("all");
-                    setFilterStyle("all");
+                    setFilterColor("");
+                    setFilterSeason("");
+                    setFilterStyle("");
                     setSelectedCategory(null);
                   }} 
                   className="w-full text-xs text-zinc-500 hover:text-zinc-900"
@@ -594,7 +605,7 @@ ${item.careInstructions || "Lavage standard."}
                     </Button>
                   </div>
 
-                  <div className="absolute top-6 right-6 flex gap-2 z-20">
+                  <div className="absolute top-6 right-6 flex gap-2 z-50">
                     <Button 
                       variant="secondary" 
                       size="icon" 
@@ -606,20 +617,23 @@ ${item.careInstructions || "Lavage standard."}
                           handleStartEdit(item);
                         }
                       }}
-                      className={`rounded-full w-10 h-10 backdrop-blur-md border-white/20 text-white ${isEditing ? 'bg-green-600/60 border-green-400/50' : 'bg-black/20'}`}
+                      className={`rounded-full w-12 h-12 backdrop-blur-md border-white/20 text-white shadow-lg pointer-events-auto transition-all transition-colors ${isEditing ? 'bg-green-600/80 border-green-400/50' : 'bg-black/40 hover:bg-black/60'}`}
+                      title={isEditing ? "Enregistrer" : "Modifier"}
                     >
                       {isEditing ? <Save className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
                     </Button>
                     <Button 
                       variant="secondary" 
                       size="icon" 
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedItemId(null);
                         setIsEditing(false);
                       }}
-                      className="rounded-full w-10 h-10 bg-black/20 backdrop-blur-md border-white/20 text-white"
+                      className="rounded-full w-12 h-12 bg-black/40 backdrop-blur-md border-white/20 text-white hover:bg-black/60 shadow-lg pointer-events-auto"
+                      title="Fermer"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-6 h-6" />
                     </Button>
                   </div>
                 </div>

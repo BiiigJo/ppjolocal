@@ -40,9 +40,36 @@ export default function WeatherWidget({ onWeatherChange }: WeatherWidgetProps) {
     );
   }, []);
 
-  if (loading) return null;
-  if (error) return null;
-  if (!weather) return null;
+  if (loading) {
+    return (
+      <Card className="rounded-2xl border-none shadow-sm bg-white/50 animate-pulse py-2 px-4 h-[52px] flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-zinc-100 rounded-lg" />
+          <div className="space-y-1">
+            <div className="w-10 h-3 bg-zinc-100 rounded" />
+            <div className="w-16 h-2 bg-zinc-100 rounded" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (error || !weather) {
+    return (
+      <Card className="rounded-2xl border-none shadow-sm bg-white/50 py-2 px-4 h-[52px] flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="text-xl flex items-center justify-center w-8 h-8 bg-zinc-50 rounded-lg opacity-50">
+            🌡️
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-bold text-zinc-400">Météo indisponible</span>
+            <span className="text-[8px] uppercase tracking-tighter text-zinc-300">Position non partagée</span>
+          </div>
+        </div>
+        <MapPin className="w-3 h-3 text-zinc-300" />
+      </Card>
+    );
+  }
 
   return (
     <Card 

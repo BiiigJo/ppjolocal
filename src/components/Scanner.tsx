@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, ChangeEvent, useEffect, useMemo } from "react";
-import { Camera, RefreshCw, Check, X, Loader2, Upload, Plus, Crop as CropIcon, AlertCircle, Hash, MapPin as MapPinIcon, Type } from "lucide-react";
+import { Camera, RefreshCw, Check, X, Loader2, Upload, Plus, Crop as CropIcon, AlertCircle, Hash, MapPin as MapPinIcon, Type, Trash2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -240,7 +240,7 @@ function ClothingCard({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, x: 200, scale: 0.8 }}
         whileDrag={{ scale: 1.02, zIndex: 50 }}
-        className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-xl space-y-6 relative touch-none select-none cursor-grab active:cursor-grabbing overflow-hidden"
+        className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-xl space-y-6 relative touch-pan-y select-none cursor-grab active:cursor-grabbing overflow-hidden"
       >
         {isSaved && (
           <div 
@@ -457,27 +457,35 @@ function ClothingCard({
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-zinc-50">
+        <div className="flex gap-3 pt-4 border-t border-zinc-50">
           <Button 
             variant="ghost"
+            size="icon"
             onClick={() => onIgnore(id)}
-            className="flex-1 rounded-xl h-12 text-zinc-400 font-bold"
+            className={`w-14 h-14 rounded-[1.25rem] transition-all ${isIgnored ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400 hover:text-red-500 hover:bg-red-50'}`}
             disabled={isSaved}
+            title={isIgnored ? "Restaurer" : "Ignorer"}
           >
-            {isIgnored ? "Restaurer" : "Ignorer"}
+            <Trash2 className="w-6 h-6" />
           </Button>
           <Button 
             onClick={() => onSave(id)} 
             disabled={isSaved || isIgnored}
-            className={`flex-1 rounded-xl h-12 ${isSaved ? 'bg-green-500' : 'bg-zinc-900 hover:bg-zinc-800'} text-white font-bold transition-all shadow-lg`}
+            className={`flex-1 h-14 rounded-[1.25rem] ${isSaved ? 'bg-green-500' : 'bg-zinc-900 hover:bg-zinc-800'} text-white transition-all shadow-lg flex items-center justify-center gap-2`}
           >
             {isSaved ? (
               <>
-                <Check className="w-4 h-4 mr-2" />
-                Ajouté
+                <Check className="w-5 h-5" />
+                <span className="font-bold text-sm">Ajouté</span>
               </>
             ) : (
-              "Ajouter"
+              <>
+                <div className="relative">
+                  <Heart className="w-6 h-6 fill-current" />
+                  <Plus className="w-3.5 h-3.5 absolute -top-1 -right-1 text-white stroke-[3.5px] bg-zinc-900 rounded-full" />
+                </div>
+                <span className="font-bold text-sm">Ajouter</span>
+              </>
             )}
           </Button>
         </div>
@@ -1300,7 +1308,7 @@ export default function Scanner({ user, onTabChange, reScanPhoto, onClearReScan,
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={reset} className="flex-1 rounded-xl h-12 border-zinc-200">
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Reprendre
+                    Recommencer
                   </Button>
                   <Button 
                     onClick={() => analyze()} 

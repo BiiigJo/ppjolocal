@@ -76,8 +76,22 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, []);
+    const searchParams = new URLSearchParams(window.location.search);
+    const outfitId = searchParams.get('outfit');
+    if (outfitId) {
+      setTimeout(() => {
+        const element = document.getElementById(`outfit-${outfitId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Highlight effect
+          element.classList.add('ring-2', 'ring-zinc-900', 'ring-offset-4');
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-zinc-900', 'ring-offset-4');
+          }, 3000);
+        }
+      }, 500);
+    }
+  }, [outfits]);
 
   const handleUpdateName = async (outfit: Outfit) => {
     if (!editingName.trim()) {
@@ -97,34 +111,37 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
   };
 
   const handleShare = async (outfit: Outfit) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?outfit=${outfit.id}`;
     const shareData = {
       title: outfit.name,
-      text: `Regarde cette tenue StyleScan : ${outfit.name}${outfit.occasion ? ` pour ${outfit.occasion}` : ''}!`,
-      url: window.location.href,
+      text: `Découvre ma tenue StyleScan : ${outfit.name}${outfit.occasion ? ` pour ${outfit.occasion}` : ''} !`,
+      url: shareUrl,
     };
 
     if (navigator.share) {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        console.error("Share failed:", err);
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error("Share failed:", err);
+        }
       }
     } else {
       // Fallback: Copy to clipboard
       try {
-        await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-        toast.success("Lien de partage copié dans le presse-papier !");
+        await navigator.clipboard.writeText(`${shareData.text}\n\nLien unique : ${shareUrl}`);
+        toast.success("Lien de partage unique copié dans le presse-papier !");
       } catch (err) {
-        toast.error("Impossible de partager");
+        toast.error("Impossible de copier le lien");
       }
     }
   };
 
   // Filter states
-  const [filterColor, setFilterColor] = useState<string>("all");
-  const [filterType, setFilterType] = useState<string>("all");
-  const [filterSeason, setFilterSeason] = useState<string>("all");
-  const [filterOccasion, setFilterOccasion] = useState<string>("all");
+  const [filterColor, setFilterColor] = useState<string>("");
+  const [filterType, setFilterType] = useState<string>("");
+  const [filterSeason, setFilterSeason] = useState<string>("");
+  const [filterOccasion, setFilterOccasion] = useState<string>("");
 
   // Local date for navigation if no outfits are present
   const [navDate, setNavDate] = useState<Date>(new Date());
@@ -175,13 +192,13 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
     const occasions = new Set<string>();
 
     Object.values(clothingItems).forEach(item => {
-      if (item.color) colors.add(item.color);
-      if (item.type) types.add(item.type);
-      if (item.season) seasons.add(item.season);
+      if (item.color && item.color.trim()) colors.add(item.color.trim());
+      if (item.type && item.type.trim()) types.add(item.type.trim());
+      if (item.season && item.season.trim()) seasons.add(item.season.trim());
     });
 
     outfits.forEach(outfit => {
-      if (outfit.occasion) occasions.add(outfit.occasion);
+      if (outfit.occasion && outfit.occasion.trim()) occasions.add(outfit.occasion.trim());
     });
 
     return {
@@ -197,11 +214,14 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
       const items = outfit.itemIds.map(id => clothingItems[id]).filter(Boolean);
       const outfitDate = new Date(outfit.date);
       
-      const matchesColor = filterColor === "all" || 
-        (outfit.dominantColor ? outfit.dominantColor === filterColor : items.some(item => item.color === filterColor));
-      const matchesType = filterType === "all" || items.some(item => item.type === filterType);
-      const matchesSeason = filterSeason === "all" || items.some(item => item.season === filterSeason);
-      const matchesOccasion = filterOccasion === "all" || outfit.occasion === filterOccasion;
+      const matchesColor = !filterColor || filterColor === "all" || 
+        (outfit.dominantColor 
+          ? outfit.dominantColor.toLowerCase().trim() === filterColor.toLowerCase().trim() 
+          : items.some(item => item.color && item.color.toLowerCase().trim() === filterColor.toLowerCase().trim())
+        );
+      const matchesType = !filterType || filterType === "all" || items.some(item => item.type && item.type.toLowerCase().trim() === filterType.toLowerCase().trim());
+      const matchesSeason = !filterSeason || filterSeason === "all" || items.some(item => item.season && item.season.toLowerCase().trim() === filterSeason.toLowerCase().trim());
+      const matchesOccasion = !filterOccasion || filterOccasion === "all" || (outfit.occasion && outfit.occasion.toLowerCase().trim() === filterOccasion.toLowerCase().trim());
       const matchesDate = !selectedDate || isSameDay(outfitDate, selectedDate);
       const matchesGalleryItem = !filterItemId || outfit.itemIds.includes(filterItemId);
 
@@ -210,10 +230,10 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
   }, [outfits, clothingItems, filterColor, filterType, filterSeason, filterOccasion, selectedDate, filterItemId]);
 
   const resetFilters = () => {
-    setFilterColor("all");
-    setFilterType("all");
-    setFilterSeason("all");
-    setFilterOccasion("all");
+    setFilterColor("");
+    setFilterType("");
+    setFilterSeason("");
+    setFilterOccasion("");
     setSelectedDate(null);
     if (onClearFilter) onClearFilter();
   };
@@ -336,13 +356,13 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
                     <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Couleur</label>
                     <Select value={filterColor} onValueChange={setFilterColor}>
                       <SelectTrigger className="h-10 rounded-xl text-xs bg-white border-zinc-100 shadow-sm">
-                        <SelectValue placeholder="Tous" />
+                        <SelectValue placeholder="Toutes" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-zinc-100 shadow-xl">
-                        <SelectItem value="all">
+                        <SelectItem value="">
                           <div className="flex items-center gap-2">
                              <div className="w-3 h-3 rounded-full border border-zinc-100 bg-zinc-200" />
-                             Tous
+                             Toutes
                           </div>
                         </SelectItem>
                         {filterOptions.colors.map(c => (
@@ -363,7 +383,7 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
                         <SelectValue placeholder="Tous" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-zinc-100 shadow-xl">
-                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="">Tous</SelectItem>
                         {filterOptions.types.map(t => (
                           <SelectItem key={t} value={t}>{t}</SelectItem>
                         ))}
@@ -374,10 +394,10 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
                     <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Saison</label>
                     <Select value={filterSeason} onValueChange={setFilterSeason}>
                       <SelectTrigger className="h-10 rounded-xl text-xs bg-white border-zinc-100 shadow-sm">
-                        <SelectValue placeholder="Tous" />
+                        <SelectValue placeholder="Toutes" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-zinc-100 shadow-xl">
-                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="">Toutes</SelectItem>
                         <SelectItem value="Printemps">Printemps</SelectItem>
                         <SelectItem value="Été">Été</SelectItem>
                         <SelectItem value="Automne">Automne</SelectItem>
@@ -390,10 +410,10 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
                     <label className="text-[10px] font-bold uppercase text-zinc-400 px-1">Occasion</label>
                     <Select value={filterOccasion} onValueChange={setFilterOccasion}>
                       <SelectTrigger className="h-10 rounded-xl text-xs bg-white border-zinc-100 shadow-sm">
-                        <SelectValue placeholder="Tous" />
+                        <SelectValue placeholder="Toutes" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-zinc-100 shadow-xl">
-                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="">Toutes</SelectItem>
                         {filterOptions.occasions.map(o => (
                           <SelectItem key={o} value={o}>{o}</SelectItem>
                         ))}
@@ -422,7 +442,7 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
               ? "Vous n'avez pas encore enregistré de photo avec ce vêtement."
               : "Aucune tenue ne correspond à vos filtres sélectionnés."}
           </p>
-          {(filterColor !== "all" || filterType !== "all" || filterSeason !== "all" || filterOccasion !== "all" || selectedDate || filterItemId) && (
+          {( (filterColor !== "" && filterColor !== "all") || (filterType !== "" && filterType !== "all") || (filterSeason !== "" && filterSeason !== "all") || (filterOccasion !== "" && filterOccasion !== "all") || selectedDate || filterItemId) && (
             <Button variant="outline" onClick={resetFilters} className="rounded-xl border-zinc-200 font-bold">
               Effacer tous les filtres
             </Button>
@@ -550,7 +570,11 @@ export default function OutfitGallery({ user, onReScan, filterItemId, onClearFil
 
                 <div className="space-y-4">
                   {monthOutfits.map((outfit) => (
-                    <Card key={outfit.id || `outfit-${outfit.createdAt}-${Math.random()}`} className="overflow-hidden rounded-3xl border-none shadow-sm bg-white">
+                    <Card 
+                      key={outfit.id || `outfit-${outfit.createdAt}-${Math.random()}`} 
+                      id={`outfit-${outfit.id}`}
+                      className="overflow-hidden rounded-3xl border-none shadow-sm bg-white transition-all duration-500"
+                    >
                         <div className="p-4 space-y-4">
                           <div className="flex justify-between items-start">
                             <div className="space-y-1 flex-1">

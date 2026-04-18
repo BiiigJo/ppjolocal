@@ -97,62 +97,105 @@ export default function OutfitGenerator({
   /* Removed auto-trigger useEffect */
 
   const generateDailySuggestion = async () => {
+    // Diagnostic log
+    console.log("generateDailySuggestion called", { wardrobeLength: wardrobe.length, loading });
+
+    if (loading) return;
+
+    if (wardrobe.length < 3) {
+      toast.error("Dressing trop vide", {
+        description: "Ajoutez au moins 3 vêtements pour que l'IA puisse créer des tenues."
+      });
+      return;
+    }
+
+    const toastId = toast.loading("L'IA prépare votre tenue du jour...");
     setLoading(true);
     setIsDailySuggestion(true);
     
-    const criteria = {
-      occasion: "Ma tenue du jour (Style quotidien)",
-      dates: savedDates.map(d => d.toISOString()),
-      seedItemId: seedItemId || null
-    };
-    localStorage.setItem("last_outfit_generation", JSON.stringify(criteria));
-    setLastCriteria(criteria);
-
     try {
-      // Scroll to the generate button area
-      generateBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Save criteria to history
+      const criteria = {
+        occasion: "Ma tenue du jour (Style quotidien)",
+        dates: (savedDates || [new Date()]).map(d => d instanceof Date ? d.toISOString() : new Date(d).toISOString()),
+        seedItemId: seedItemId || null
+      };
+      localStorage.setItem("last_outfit_generation", JSON.stringify(criteria));
+      setLastCriteria(criteria);
+
+      // Scroll to the results area
+      if (generateBtnRef.current) {
+        generateBtnRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       
-      const weatherText = `${internalWeather?.temp || weather?.temp}°C, ${internalWeather?.condition || weather?.condition}`;
+      const weatherText = internalWeather ? `${internalWeather.temp}°C, ${internalWeather.condition}` : undefined;
       const seedItem = seedItemId ? wardrobe.find(i => i.id === seedItemId) : undefined;
+      
       const res = await suggestOutfits(wardrobe, "Ma tenue du jour (Style quotidien)", weatherText, seedItem);
+      
+      if (!res || !Array.isArray(res) || res.length === 0) {
+        throw new Error("Réponse vide de l'IA");
+      }
+      
       setSavedSuggestions(res);
-    } catch (err) {
-      console.error("Daily generation failed:", err);
+      toast.success("Votre look du jour est prêt !", { id: toastId });
+    } catch (err: any) {
+      console.error("Daily generation error:", err);
+      const errorMessage = err?.message?.includes("API_KEY") 
+        ? "Configuration IA manquante" 
+        : "L'IA est momentanément indisponible";
+      
+      toast.error(errorMessage, { 
+        id: toastId,
+        description: "Réessayez dans quelques instants."
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const generate = async () => {
+    if (loading) return;
+
     if (!savedOccasion) {
-      toast.error("Veuillez préciser l'occasion");
+      toast.error("Précisez l'occasion", { description: "Ex: Un mariage, une soirée..." });
       return;
     }
     if (wardrobe.length < 3) {
-      toast.error("Ajoutez plus de vêtements à votre dressing pour obtenir des suggestions");
+      toast.error("Dressing trop vide", { description: "Ajoutez au moins 3 vêtements." });
       return;
     }
 
+    const toastId = toast.loading("Génération en cours...");
     setLoading(true);
     setIsDailySuggestion(false);
     
-    // Save to history
-    const criteria = {
-      occasion: savedOccasion,
-      dates: savedDates.map(d => d.toISOString()),
-      seedItemId: seedItemId || null
-    };
-    localStorage.setItem("last_outfit_generation", JSON.stringify(criteria));
-    setLastCriteria(criteria);
-
     try {
-      const weatherText = weather ? `${weather.temp}°C, ${weather.condition}` : undefined;
+      const criteria = {
+        occasion: savedOccasion,
+        dates: (savedDates || [new Date()]).map(d => d instanceof Date ? d.toISOString() : new Date(d).toISOString()),
+        seedItemId: seedItemId || null
+      };
+      localStorage.setItem("last_outfit_generation", JSON.stringify(criteria));
+      setLastCriteria(criteria);
+
+      const weatherText = internalWeather ? `${internalWeather.temp}°C, ${internalWeather.condition}` : undefined;
       const seedItem = seedItemId ? wardrobe.find(i => i.id === seedItemId) : undefined;
+      
       const res = await suggestOutfits(wardrobe, savedOccasion, weatherText, seedItem);
+      
+      if (!res || !Array.isArray(res) || res.length === 0) {
+        throw new Error("Réponse vide de l'IA");
+      }
+
       setSavedSuggestions(res);
-    } catch (err) {
-      console.error("Generation failed:", err);
-      toast.error("Impossible de générer des suggestions");
+      toast.success("Suggestions générées !", { id: toastId });
+    } catch (err: any) {
+      console.error("Generation error:", err);
+      toast.error("Erreur de génération", { 
+        id: toastId,
+        description: "Vérifiez votre connexion ou réessayez plus tard."
+      });
     } finally {
       setLoading(false);
     }
@@ -275,7 +318,7 @@ export default function OutfitGenerator({
         <Button
           variant="outline"
           onClick={generateDailySuggestion}
-          disabled={loading || wardrobe.length < 3}
+          disabled={loading}
           className="flex-1 h-12 rounded-2xl border-amber-100 bg-amber-50/50 text-amber-900 hover:bg-amber-100 transition-all font-bold group"
         >
           <Sparkles className="w-5 h-5 mr-2 text-amber-500 group-hover:scale-110 transition-transform" />
@@ -470,7 +513,7 @@ function SuggestionCard({
             onIgnore();
           }
         }}
-        className={`touch-none select-none cursor-grab active:cursor-grabbing transition-opacity duration-300 ${isIgnored ? 'opacity-60 grayscale-[0.3]' : 'opacity-100'}`}
+        className={`touch-pan-y select-none cursor-grab active:cursor-grabbing transition-opacity duration-300 ${isIgnored ? 'opacity-60 grayscale-[0.3]' : 'opacity-100'}`}
       >
         <Card className="overflow-hidden rounded-[2rem] border-none shadow-lg bg-white group/card relative">
           <div className="p-6 space-y-6">
@@ -501,15 +544,15 @@ function SuggestionCard({
             </div>
             
             {/* Visual Composition: Responsive Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {suggestion.items.length > 0 && (() => {
                 const firstItem = getMatchedItem(suggestion.items[0]);
                 const sideItems = suggestion.items.slice(1, 3);
                 
                 return (
                   <>
-                    {/* Main Image: Spans 2 columns and 2 rows on tablet+ */}
-                    <div className="col-span-2 sm:row-span-2 relative aspect-[4/5] sm:aspect-auto rounded-3xl overflow-hidden bg-zinc-50 border border-zinc-100 shadow-sm group">
+                    {/* Main Image: Enforced square aspect ratio to match side items perfectly */}
+                    <div className="col-span-2 row-span-2 relative aspect-square rounded-3xl overflow-hidden bg-zinc-50 border border-zinc-100 shadow-sm group">
                       {firstItem ? (
                         <img 
                           src={firstItem.imageUrl} 
