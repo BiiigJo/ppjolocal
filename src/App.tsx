@@ -35,6 +35,8 @@ export default function App() {
   const [generatorSelectedDates, setGeneratorSelectedDates] = useState<Date[]>([new Date()]);
   const [generatorIgnoredIds, setGeneratorIgnoredIds] = useState<Set<string>>(new Set());
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   const getLogoColor = () => {
     if (!weather) return "bg-zinc-900";
     const icon = weather.icon;
@@ -51,10 +53,8 @@ export default function App() {
   };
 
   const clearData = () => {
-    if (confirm("Voulez-vous vraiment supprimer toutes vos données locales ? Cette action est irréversible.")) {
-      localStorage.clear();
-      window.location.reload();
-    }
+    localStorage.clear();
+    window.location.reload();
   };
 
   if (loading) {
@@ -79,11 +79,64 @@ export default function App() {
             </div>
             <span className="font-bold text-lg sm:text-xl tracking-tight group-hover:text-zinc-600 transition-colors">StyleScan</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={clearData} title="Réinitialiser" className="rounded-full">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setShowResetConfirm(true)} 
+            title="Réinitialiser" 
+            className="rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"
+          >
             <RotateCcw className="w-5 h-5 text-zinc-500" />
           </Button>
         </div>
       </header>
+
+      {/* Confirmation Dialog for Reset */}
+      <AnimatePresence>
+        {showResetConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowResetConfirm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl space-y-6"
+            >
+              <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                <RotateCcw className="w-8 h-8 text-red-600" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-bold text-zinc-900">Tout supprimer ?</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">
+                  Attention, cette action est irréversible. Vous perdrez tout votre historique de scan et vos tenues sauvegardées.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button 
+                  variant="destructive" 
+                  onClick={clearData}
+                  className="w-full h-12 rounded-xl font-bold text-base shadow-lg shadow-red-500/20"
+                >
+                  Oui, tout supprimer
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowResetConfirm(false)}
+                  className="w-full h-12 rounded-xl text-zinc-500 font-bold hover:bg-zinc-100 transition-colors"
+                >
+                  Conserver mes données
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <main className="max-w-2xl mx-auto p-4 space-y-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -141,39 +194,39 @@ export default function App() {
             <TabsList className="max-w-2xl mx-auto h-16 bg-transparent border-0 gap-0 w-full flex justify-around items-center">
               <TabsTrigger 
                 value="scanner" 
-                className="flex-1 flex flex-col items-center gap-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none group"
+                className="flex-1 flex flex-col items-center gap-1 data-active:bg-transparent data-active:shadow-none group"
               >
-                <div className="px-5 py-1.5 rounded-full transition-all duration-300 group-data-[state=active]:bg-zinc-100 mb-0.5">
-                  <Camera className="w-6 h-6 text-zinc-400 group-data-[state=active]:text-black" />
+                <div className="mb-0.5">
+                  <Camera className="w-6 h-6 text-zinc-400 group-data-active:text-black" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-data-[state=active]:text-black">Scanner</span>
+                <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 group-data-active:text-black group-data-active:font-black transition-all">Scanner</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="wardrobe" 
-                className="flex-1 flex flex-col items-center gap-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none group"
+                className="flex-1 flex flex-col items-center gap-1 data-active:bg-transparent data-active:shadow-none group"
               >
-                <div className="px-5 py-1.5 rounded-full transition-all duration-300 group-data-[state=active]:bg-zinc-100 mb-0.5">
-                  <Shirt className="w-6 h-6 text-zinc-400 group-data-[state=active]:text-black" />
+                <div className="mb-0.5">
+                  <Shirt className="w-6 h-6 text-zinc-400 group-data-active:text-black" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-data-[state=active]:text-black">Dressing</span>
+                <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 group-data-active:text-black group-data-active:font-black transition-all">Dressing</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="gallery" 
-                className="flex-1 flex flex-col items-center gap-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none group"
+                className="flex-1 flex flex-col items-center gap-1 data-active:bg-transparent data-active:shadow-none group"
               >
-                <div className="px-5 py-1.5 rounded-full transition-all duration-300 group-data-[state=active]:bg-zinc-100 mb-0.5">
-                  <ImageIcon className="w-6 h-6 text-zinc-400 group-data-[state=active]:text-black" />
+                <div className="mb-0.5">
+                  <ImageIcon className="w-6 h-6 text-zinc-400 group-data-active:text-black" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-data-[state=active]:text-black">Outfits</span>
+                <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 group-data-active:text-black group-data-active:font-black transition-all">Outfits</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="generator" 
-                className="flex-1 flex flex-col items-center gap-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none group"
+                className="flex-1 flex flex-col items-center gap-1 data-active:bg-transparent data-active:shadow-none group"
               >
-                <div className="px-5 py-1.5 rounded-full transition-all duration-300 group-data-[state=active]:bg-zinc-100 mb-0.5">
-                  <Sparkles className="w-6 h-6 text-zinc-400 group-data-[state=active]:text-black" />
+                <div className="mb-0.5">
+                  <Sparkles className="w-6 h-6 text-zinc-400 group-data-active:text-black" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-data-[state=active]:text-black">IA</span>
+                <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 group-data-active:text-black group-data-active:font-black transition-all">IA</span>
               </TabsTrigger>
             </TabsList>
           </div>
