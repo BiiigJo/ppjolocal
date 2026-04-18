@@ -125,7 +125,7 @@ export async function suggestOutfits(
     : "";
   
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview"
+    model: "gemini-3-flash-preview",
     contents: `Voici MA garde-robe :\n${wardrobeContext}${weatherContext}${seedItemContext}\n\nSuggère-moi 3 tenues adaptées pour l'occasion suivante : ${occasion}. Pour chaque tenue, donne un nom, la liste des vêtements à utiliser et une brève explication du style. Réponds en français au format JSON.`,
     config: {
       responseMimeType: "application/json",
