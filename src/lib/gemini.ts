@@ -1,16 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Initialiser Gemini avec la clé depuis .env.local
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-if (!apiKey) {
-  console.error('GEMINI_API_KEY is not set');
-}
-
 const ai = new GoogleGenAI({ 
-  apiKey: apiKey || ''
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY! 
 });
-
 export const clothingRecognitionSchema = {
   type: Type.OBJECT,
   properties: {
@@ -45,25 +38,6 @@ export const clothingRecognitionSchema = {
   required: ["items", "poeticSuggestedTitle"],
 };
 
-export const outfitSuggestionSchema = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      name: { type: Type.STRING },
-      items: { type: Type.ARRAY, items: { type: Type.STRING } },
-      explanation: { type: Type.STRING },
-    },
-    required: ["name", "items", "explanation"],
-  },
-};
-
-/**
- * Reconnaître les vêtements dans une image avec Gemini
- * @param base64Image - Image en base64
- * @param allowedColors - Liste des couleurs autorisées
- * @returns Objet avec poeticSuggestedTitle et items (vêtements détectés)
- */
 export async function recognizeClothing(base64Image: string, allowedColors: string[]) {
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -98,38 +72,28 @@ export async function recognizeClothing(base64Image: string, allowedColors: stri
   return data;
 }
 
-/**
- * Suggérer des tenues basées sur la garde-robe
- * @param wardrobe - Liste des vêtements disponibles
- * @param occasion - Occasion (ex: "Soirée", "Bureau", etc)
- * @param weatherInfo - Information météo (optionnel)
- * @param seedItem - Un vêtement à inclure obligatoirement (optionnel)
- * @returns Tableau de 3 suggestions d'outfits
- */
-export async function suggestOutfits(
-  wardrobe: any[], 
-  occasion: string, 
-  weatherInfo?: string, 
-  seedItem?: any
-) {
-  const wardrobeContext = wardrobe
-    .map(item => `- ${item.name} (${item.type}, ${item.color}, ${item.style})`)
-    .join('\n');
-  
-  const weatherContext = weatherInfo 
-    ? `\n\nNote: La météo actuelle est : ${weatherInfo}.` 
-    : "";
-  
-  const seedItemContext = seedItem 
-    ? `\n\nIMPORTANT: Chaque tenue suggérée DOIT ABSOLUMENT inclure le vêtement suivant de ma garde-robe : "${seedItem.name}" (${seedItem.type}, ${seedItem.color}). Construis les tenues AUTOUR de cette pièce maîtresse.`
-    : "";
+export async function suggestOutfits(wardrobe: any[], occasion: string, weatherInfo?: string, seedItem?: any) {
+  const wardrobeContext = wardrobe.map(item => `- ${item.name} (${item.type}, ${item.color}, ${item.style})`).join('\n');
+  const weatherContext = weatherInfo ? `\n\nNote: La météo actuelle est : ${weatherInfo}.` : "";
+  const seedItemContext = seedItem ? `\n\nIMPORTANT: Chaque tenue suggérée DOIT ABSOLUMENT inclure le vêtement suivant de ma garde-robe : "${seedItem.name}" (${seedItem.type}, ${seedItem.color}). Construis les tenues AUTOUR de cette pièce maîtresse.` : "";
   
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Voici MA garde-robe :\n${wardrobeContext}${weatherContext}${seedItemContext}\n\nSuggère-moi 3 tenues adaptées pour l'occasion suivante : ${occasion}. Pour chaque tenue, donne un nom, la liste des vêtements à utiliser et une brève explication du style. Réponds en français au format JSON.`,
+    contents: `Voici ma garde-robe :\n${wardrobeContext}${weatherContext}${seedItemContext}\n\nSuggère-moi 3 tenues adaptées pour l'occasion suivante : ${occasion}. Pour chaque tenue, donne un nom, la liste des vêtements à utiliser et une brève explication du style. Réponds en français au format JSON.`,
     config: {
       responseMimeType: "application/json",
-      responseSchema: outfitSuggestionSchema,
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            items: { type: Type.ARRAY, items: { type: Type.STRING } },
+            explanation: { type: Type.STRING },
+          },
+          required: ["name", "items", "explanation"],
+        },
+      },
     },
   });
 
