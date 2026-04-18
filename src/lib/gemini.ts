@@ -66,7 +66,7 @@ export const outfitSuggestionSchema = {
  */
 export async function recognizeClothing(base64Image: string, allowedColors: string[]) {
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
+    model: "gemini-3-flash-preview",
     contents: [
       {
         parts: [
@@ -125,7 +125,7 @@ export async function suggestOutfits(
     : "";
   
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
+    model: "gemini-3-flash-preview"
     contents: `Voici ma garde-robe :\n${wardrobeContext}${weatherContext}${seedItemContext}\n\nSuggère-moi 3 tenues adaptées pour l'occasion suivante : ${occasion}. Pour chaque tenue, donne un nom, la liste des vêtements à utiliser et une brève explication du style. Réponds en français au format JSON.`,
     config: {
       responseMimeType: "application/json",
