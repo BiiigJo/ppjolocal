@@ -7,4 +7,5 @@ coverage/
 .env*
 !.env.example
 .env.local
+.env.*.local
 firebase-applet-config.json
