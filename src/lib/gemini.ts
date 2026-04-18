@@ -1,8 +1,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Initialiser Gemini avec la clé depuis .env.local
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!apiKey) {
+  console.error('GEMINI_API_KEY is not set');
+}
+
 const ai = new GoogleGenAI({ 
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY! 
+  apiKey: apiKey || ''
 });
 
 export const clothingRecognitionSchema = {
