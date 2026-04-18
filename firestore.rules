@@ -1,0 +1,68 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    
+    function isValidClothingItem(data) {
+      return data.keys().hasAll(['name', 'category', 'type', 'color', 'style', 'imageUrl', 'userId', 'createdAt']) &&
+             data.name is string && data.name.size() < 100 &&
+             data.category is string && data.category.size() < 50 &&
+             data.type is string && data.type.size() < 50 &&
+             data.color is string && data.color.size() < 50 &&
+             data.style is string && data.style.size() < 50 &&
+             data.imageUrl is string && data.imageUrl.size() < 1500000 && // 1.5MB max for base64
+             data.userId == request.auth.uid &&
+             data.createdAt is string &&
+             (!('brand' in data) || (data.brand is string && data.brand.size() < 100)) &&
+             (!('description' in data) || (data.description is string && data.description.size() < 1000)) &&
+             (!('careInstructions' in data) || (data.careInstructions is string && data.careInstructions.size() < 1000)) &&
+             (!('season' in data) || (data.season is string && data.season.size() < 50));
+    }
+    
+    function isValidOutfit(data) {
+      let requiredFields = ['name', 'itemIds', 'date', 'photoUrl', 'photoHash', 'hashtags', 'dominantColor', 'occasion', 'userId', 'createdAt'];
+      return data.keys().hasAll(requiredFields) &&
+             data.name is string && data.name.size() < 200 &&
+             data.itemIds is list &&
+             data.date is string &&
+             data.photoUrl is string && data.photoUrl.size() < 1500000 &&
+             data.photoHash is string && data.photoHash.size() < 64 &&
+             data.hashtags is list &&
+             data.dominantColor is string &&
+             data.occasion is string &&
+             data.userId == request.auth.uid &&
+             data.createdAt is string;
+    }
+
+    match /clothingItems/{itemId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidClothingItem(request.resource.data);
+      allow update: if isDocOwner() && isValidClothingItem(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isDocOwner();
+    }
+
+    match /outfits/{outfitId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidOutfit(request.resource.data);
+      allow update: if isDocOwner() && isValidOutfit(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isDocOwner();
+    }
+    
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+  }
+}

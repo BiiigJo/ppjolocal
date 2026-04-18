@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "ClothingItem": {
+      "title": "ClothingItem",
+      "description": "Un vêtement individuel scanné par l'utilisateur.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nom ou description courte du vêtement" },
+        "category": { "type": "string", "description": "Catégorie (Haut, Bas, Chaussures, etc.)" },
+        "type": { "type": "string", "description": "Type spécifique (T-shirt, Jean, Baskets, etc.)" },
+        "color": { "type": "string", "description": "Couleur dominante" },
+        "style": { "type": "string", "description": "Style (Casual, Formel, Sport, etc.)" },
+        "season": { "type": "string", "description": "Saison (Printemps, Été, Automne, Hiver, Toutes saisons)" },
+        "imageUrl": { "type": "string", "description": "URL de l'image du vêtement" },
+        "userId": { "type": "string", "description": "ID de l'utilisateur propriétaire" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Date de création" }
+      },
+      "required": ["name", "category", "imageUrl", "userId", "createdAt"]
+    },
+    "Outfit": {
+      "title": "Outfit",
+      "description": "Une combinaison de vêtements (tenue) pour une date ou un événement.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nom de la tenue" },
+        "itemIds": { "type": "array", "items": { "type": "string" }, "description": "Liste des IDs des vêtements composant la tenue" },
+        "date": { "type": "string", "format": "date", "description": "Date à laquelle la tenue a été portée" },
+        "photoUrl": { "type": "string", "description": "Photo optionnelle de la tenue complète" },
+        "occasion": { "type": "string", "description": "Occasion ou événement" },
+        "userId": { "type": "string", "description": "ID de l'utilisateur propriétaire" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Date de création" }
+      },
+      "required": ["itemIds", "date", "userId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/clothingItems/{itemId}": {
+      "schema": "ClothingItem",
+      "description": "Collection des vêtements individuels"
+    },
+    "/outfits/{outfitId}": {
+      "schema": "Outfit",
+      "description": "Collection des tenues enregistrées"
+    }
+  }
+}

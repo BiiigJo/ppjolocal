@@ -1,0 +1,6 @@
+{
+  "name": "StyleScan",
+  "description": "Scanner de vêtements et gestionnaire d'outfits intelligent avec IA. Scannez vos vêtements, organisez votre garde-robe et générez des tenues pour chaque occasion.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": []
+}
